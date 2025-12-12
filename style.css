@@ -1,0 +1,105 @@
+/* Basic Reset and Layout */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: #f4f4f4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 20px;
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+}
+
+#map-wrapper {
+    width: 100%;
+    max-width: 500px; /* Limit the map size */
+    margin: 20px 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    background-color: white;
+}
+
+/* SVG Map Styling */
+#ph-map {
+    width: 100%;
+    height: auto;
+}
+
+/* Styling for the clickable regions */
+#ph-map path {
+    /* Base style for all regions */
+    cursor: pointer;
+    transition: fill 0.3s ease;
+}
+
+#ph-map path:hover {
+    /* Hover effect to indicate clickability */
+    fill-opacity: 0.7;
+}
+
+/* --- Modal/Pop-up Styles --- */
+
+/* The Modal Overlay (background) */
+.modal-overlay {
+    display: none; /* Hidden by default */
+    position: fixed; 
+    z-index: 10; 
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    overflow: auto; 
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content Box */
+.modal-content {
+    background-color: #fff;
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 30px;
+    border: 1px solid #888;
+    width: 80%; /* Could be more or less, depending on screen size */
+    max-width: 400px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    position: relative;
+}
+
+/* The Close Button */
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: 10px;
+    right: 15px;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: #333;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* The Redirect Button */
+.details-button {
+    display: inline-block;
+    padding: 10px 20px;
+    margin-top: 20px;
+    background-color: #2196F3;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.details-button:hover {
+    background-color: #0c7cd5;
+}
