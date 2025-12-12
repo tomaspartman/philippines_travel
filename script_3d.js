@@ -1,5 +1,5 @@
 // --- Global Three.js Variables ---
-let scene, camera, renderer, controls; // Added 'controls'
+let scene, camera, renderer, controls;
 let raycaster;
 let mouse = new THREE.Vector2();
 
@@ -7,81 +7,117 @@ let mouse = new THREE.Vector2();
 const MAP_CONTAINER_ID = 'map-container';
 const EXTRUSION_HEIGHT = 5; 
 const INITIAL_CAMERA_Y = 100;
+// NOTE: Change this URL if you host your GeoJSON file elsewhere!
+const GEOJSON_URL = 'philippines_data.json'; 
 
-// --- Placeholder GeoJSON data ---
-// We will keep this placeholder data for now until we load a real GeoJSON file.
-const philippinesRegionsGeoJSON = {
-    "type": "FeatureCollection",
-    "features": [
-        {
-            "type": "Feature",
-            "properties": {
-                "name": "Luzon Region",
-                "id": "luzon",
-                "url": "luzon.html"
-            },
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [
-                    [ [150, 50], [350, 50], [350, 400], [150, 400], [150, 50] ]
-                ]
-            }
-        },
-        // Let's add another simple rectangle for Visayas to show multiple objects
-        {
-            "type": "Feature",
-            "properties": {
-                "name": "Visayas Region",
-                "id": "visayas",
-                "url": "visayas.html"
-            },
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [
-                    [ [200, 450], [400, 450], [400, 600], [200, 600], [200, 450] ]
-                ]
-            }
-        }
-    ]
-};
 
-// --- Core Three.js Setup Function ---
+// --- Core Three.js Setup and Animation (init, animate, onWindowResize are unchanged) ---
+// ... (Keep the init, animate, and onWindowResize functions as they were) ...
+// ... (We will skip pasting the unchanged functions for brevity) ...
+
+
+// --- Event Handlers (onMapClick is unchanged) ---
+// ... (Keep the onMapClick function as it was) ...
+
+
+// --- NEW/UPDATED Map Creation Functions ---
+
+// 1. New function to load the GeoJSON file
+function loadGeoJSON() {
+    // We use the fetch API to load the external data file
+    fetch(GEOJSON_URL)
+        .then(response => {
+            if (!response.ok) {
+                // If fetching the local file fails (common issue), log a message
+                throw new Error(`HTTP error! Status: ${response.status}. 
+                    Check if you have a file named ${GEOJSON_URL} in your project directory.`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Once data is loaded, process it to create 3D shapes
+            createMap(data);
+            console.log("GeoJSON data loaded and 3D map created.");
+        })
+        .catch(error => {
+            console.error("Error loading GeoJSON data:", error);
+            // Fallback: If loading fails, use the old simple placeholder data
+            console.log("Using simplified placeholder map as a fallback.");
+            createMap({
+                 "features": [
+                     // Simple Luzon placeholder
+                    {"properties": {"name": "Luzon (Fallback)", "id": "luzon", "url": "luzon.html"}, "geometry": {"coordinates": [[ [150, 50], [350, 50], [350, 400], [150, 400], [150, 50] ]]}},
+                    // Simple Visayas placeholder
+                    {"properties": {"name": "Visayas (Fallback)", "id": "visayas", "url": "visayas.html"}, "geometry": {"coordinates": [[ [200, 450], [400, 450], [400, 600], [200, 600], [200, 450] ]]}}
+                 ]
+             });
+        });
+}
+
+// 2. Updated createMap function to accept the loaded data
+function createMap(geojson) {
+    // Clear any previous shapes before adding new ones
+    // (Important if you use the fallback and then manually reload)
+    scene.children.filter(obj => obj.isMesh).forEach(obj => scene.remove(obj)); 
+    
+    geojson.features.forEach(feature => {
+        const properties = feature.properties;
+        const geometry = feature.geometry;
+
+        // GeoJSON can have MultiPolygon (complex shapes) or Polygon (simple shapes)
+        const coordinatesArray = (geometry.type === 'MultiPolygon') 
+                                ? geometry.coordinates.flat() // Flatten array for simplicity
+                                : [geometry.coordinates]; // Wrap simple Polygon coordinates
+
+        coordinatesArray.forEach(coordinates => {
+            if (coordinates.length === 0) return; // Skip empty coordinate sets
+            
+            // The first array usually holds the outer boundary
+            const shapeCoordinates = coordinates[0]; 
+            
+            // --- Coordinate Conversion and Shape Creation (Same as before) ---
+            const shape = new THREE.Shape();
+            shape.moveTo(shapeCoordinates[0][0], shapeCoordinates[0][1]);
+            
+            for (let i = 1; i < shapeCoordinates.length; i++) {
+                shape.lineTo(shapeCoordinates[i][0], shapeCoordinates[i][1]);
+            }
+            // --- End Shape Creation ---
+
+            // --- Extrusion and Mesh Creation (Same as before) ---
+            const extrudeSettings = {
+                depth: EXTRUSION_HEIGHT,
+                bevelEnabled: false
+            };
+            const extrusionGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            
+            const material = new THREE.MeshPhongMaterial({
+                color: new THREE.Color(Math.random(), Math.random(), Math.random()),
+                specular: 0x555555,
+                shininess: 30
+            });
+
+            const mesh = new THREE.Mesh(extrusionGeometry, material);
+            mesh.rotation.x = Math.PI / 2;
+            
+            // Attach data for interactivity
+            mesh.userData.id = properties.id || feature.id; 
+            mesh.userData.name = properties.name || 'Unknown Region';
+            mesh.userData.url = properties.url || `${mesh.userData.id}.html`;
+            
+            scene.add(mesh);
+        });
+    });
+}
+
+
+// --- Execute initialization (Update this call) ---
 function init() {
-    container = document.getElementById(MAP_CONTAINER_ID);
+    // ... (All initialization code: camera, renderer, lighting, controls) ...
+    // ... (Keep existing code from last turn) ...
     
-    // 1. Scene Setup
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xADD8E6); 
-
-    // 2. Camera Setup
-    const aspectRatio = container.clientWidth / container.clientHeight;
-    camera = new THREE.PerspectiveCamera(50, aspectRatio, 1, 1000);
-    camera.position.set(250, INITIAL_CAMERA_Y, 450); 
-    camera.lookAt(new THREE.Vector3(250, 0, 250)); // Center view on the map area
-    
-    // 3. Renderer Setup
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    container.appendChild(renderer.domElement);
-
-    // 4. Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(ambientLight);
-    
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    directionalLight.position.set(0, 100, 0); 
-    scene.add(directionalLight);
-
-    // 5. Orbit Controls Initialization
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.target.set(250, 0, 250); // Set the center of rotation to the map center
-    controls.update();
-    
-    // 6. Raycaster
-    raycaster = new THREE.Raycaster();
-    
-    // Start drawing the 3D map shapes
-    createMap();
+    // START MAP LOADING INSTEAD OF createMap()
+    loadGeoJSON(); 
 
     // Add event listeners for resizing and clicking
     window.addEventListener('resize', onWindowResize);
@@ -91,91 +127,4 @@ function init() {
     animate();
 }
 
-// --- Map Creation Function (Unchanged from before) ---
-function createMap() {
-    philippinesRegionsGeoJSON.features.forEach(feature => {
-        const properties = feature.properties;
-        const coordinates = feature.geometry.coordinates;
-
-        const shapeCoordinates = coordinates[0]; 
-        
-        const shape = new THREE.Shape();
-        shape.moveTo(shapeCoordinates[0][0], shapeCoordinates[0][1]);
-        
-        for (let i = 1; i < shapeCoordinates.length; i++) {
-            shape.lineTo(shapeCoordinates[i][0], shapeCoordinates[i][1]);
-        }
-
-        const extrudeSettings = {
-            depth: EXTRUSION_HEIGHT,
-            bevelEnabled: false
-        };
-        const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-        
-        const material = new THREE.MeshPhongMaterial({
-            color: new THREE.Color(Math.random(), Math.random(), Math.random()),
-            specular: 0x555555,
-            shininess: 30
-        });
-
-        const mesh = new THREE.Mesh(geometry, material);
-        
-        mesh.rotation.x = Math.PI / 2; // Lay the shape flat on the ground
-        
-        mesh.userData.id = properties.id;
-        mesh.userData.name = properties.name;
-        mesh.userData.url = properties.url;
-        
-        scene.add(mesh);
-    });
-}
-
-// --- Animation Loop (Updated to include controls update) ---
-function animate() {
-    requestAnimationFrame(animate);
-    
-    // Crucial: Update controls in the animation loop
-    controls.update(); 
-    
-    renderer.render(scene, camera);
-}
-
-// --- Event Handlers (Unchanged from before) ---
-function onWindowResize() {
-    camera.aspect = container.clientWidth / container.clientHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(container.clientWidth, container.clientHeight);
-}
-
-function onMapClick(event) {
-    // Calculate mouse position in normalized device coordinates (-1 to +1)
-    const rect = renderer.domElement.getBoundingClientRect();
-    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-    // Update the raycaster with the camera and mouse position
-    raycaster.setFromCamera(mouse, camera);
-
-    // Calculate objects intersecting the ray
-    const intersects = raycaster.intersectObjects(scene.children);
-
-    if (intersects.length > 0) {
-        const clickedMesh = intersects[0].object;
-        
-        if (clickedMesh.userData.id) {
-            const modal = document.getElementById('info-modal');
-            const modalRegionName = document.getElementById('modal-region-name');
-            const modalDescription = document.getElementById('modal-description');
-            const modalDetailsLink = document.getElementById('modal-details-link');
-            
-            modalRegionName.textContent = clickedMesh.userData.name;
-            modalDescription.textContent = `You clicked the ${clickedMesh.userData.name}! Ready to go to the details page?`;
-            modalDetailsLink.href = clickedMesh.userData.url;
-
-            modal.style.display = 'block';
-        }
-    }
-}
-
-// Initialize the application
-init();
+init(); // Call init to start the program
