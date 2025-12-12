@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Philippines Trip Map</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Discover My Philippines Trip!</h1>
+        <div id="map-wrapper">
+            <svg id="ph-map" viewBox="0 0 500 800" xmlns="http://www.w3.org/2000/svg">
+                <path id="luzon" 
+                      data-name="Luzon" 
+                      data-url="luzon.html"
+                      d="M 150 50 L 350 50 L 350 400 L 150 400 Z" 
+                      fill="#FFC107" stroke="#333" stroke-width="2"/>
+
+                <path id="visayas" 
+                      data-name="Visayas" 
+                      data-url="visayas.html"
+                      d="M 200 450 L 400 450 L 400 600 L 200 600 Z" 
+                      fill="#03A9F4" stroke="#333" stroke-width="2"/>
+
+                <path id="mindanao" 
+                      data-name="Mindanao" 
+                      data-url="mindanao.html"
+                      d="M 100 650 L 300 650 L 300 750 L 100 750 Z" 
+                      fill="#4CAF50" stroke="#333" stroke-width="2"/>
+            </svg>
+        </div>
+    </div>
+
+    <div id="info-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 id="modal-region-name">Region Name</h2>
+            <p id="modal-description">A quick summary of what I did in this region.</p>
+            <a id="modal-details-link" href="#" class="details-button">View Full Trip Details</a>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
