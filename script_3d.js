@@ -84,6 +84,7 @@ function projectCoordinates(coords, mapCenter) {
     const latRange = maxLat - minLat;
     
     // Determine a scale factor to fit the map into a 500x500 area
+    // NOTE: Používame latRange, pretože mapy sveta sú širšie ako vyššie, ale Filipíny sú skôr vertikálne.
     scaleFactor = Math.min(500 / lonRange, 500 / latRange) || 1; 
 
     // Calculate the center offset to center the map at (250, 250)
@@ -119,7 +120,6 @@ function loadGeoJSON() {
             data.features.forEach(feature => {
                 const geometry = feature.geometry;
                 
-                // Recursively flatten the coordinate array to just points [lon, lat] for bounds calculation
                 let currentCoords = [];
                 if (geometry.type === 'Polygon') {
                     currentCoords = geometry.coordinates.flat(1);
@@ -153,13 +153,13 @@ function createMap(geojson) {
         const properties = feature.properties;
         const geometry = feature.geometry;
 
-        // --- ROBUST MULTIPOLYGON PROCESSING ---
+        // --- ROBUST MULTIPOLYGON PROCESSING (Zabezpečí všetky ostrovy) ---
         let parts = [];
         if (geometry.type === 'MultiPolygon') {
-            // Get the outer ring (boundary) for each separate polygon (island)
+            // Získa outer ring (hranicu) pre každý samostatný ostrov
             parts = geometry.coordinates.map(polygon => polygon[0]); 
         } else if (geometry.type === 'Polygon') {
-            // Get the outer ring for a simple polygon
+            // Získa outer ring pre jednoduchý ostrov
             parts = [geometry.coordinates[0]]; 
         } else {
             return; // Skip unknown geometry types
@@ -170,15 +170,24 @@ function createMap(geojson) {
             
             const shape = new THREE.Shape();
             
-            // Apply scale and offset to the starting point
-            const startX = shapeCoordinates[0][0] * scaleFactor + centerOffset.x;
-            const startY = shapeCoordinates[0][1] * scaleFactor + centerOffset.y;
+            // --- APLIKÁCIA SÚRADNÍC S PROJEKCIOU (LON na X, LAT na Y) ---
+            const lon_start = shapeCoordinates[0][0]; // Longitude -> X
+            const lat_start = shapeCoordinates[0][1]; // Latitude -> Y
+            
+            // Výpočet počiatočného bodu
+            const startX = lon_start * scaleFactor + centerOffset.x;
+            const startY = lat_start * scaleFactor + centerOffset.y; 
+            
             shape.moveTo(startX, startY);
             
             for (let i = 1; i < shapeCoordinates.length; i++) {
-                // Apply scale and offset to all subsequent points
-                const currentX = shapeCoordinates[i][0] * scaleFactor + centerOffset.x;
-                const currentY = shapeCoordinates[i][1] * scaleFactor + centerOffset.y;
+                const lon_current = shapeCoordinates[i][0];
+                const lat_current = shapeCoordinates[i][1];
+                
+                // Výpočet aktuálneho bodu
+                const currentX = lon_current * scaleFactor + centerOffset.x;
+                const currentY = lat_current * scaleFactor + centerOffset.y;
+                
                 shape.lineTo(currentX, currentY);
             }
             
@@ -189,7 +198,6 @@ function createMap(geojson) {
             };
             const extrusionGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
             
-            // Generate a persistent, random color for the region
             const initialColor = new THREE.Color(Math.random(), Math.random(), Math.random());
             
             const material = new THREE.MeshPhongMaterial({
