@@ -118,10 +118,15 @@ function loadGeoJSON() {
             let allCoords = [];
             data.features.forEach(feature => {
                 const geometry = feature.geometry;
-                const coordinatesArray = (geometry.type === 'MultiPolygon') 
-                                        ? geometry.coordinates.flat(2) 
-                                        : geometry.coordinates.flat(1);
-                allCoords.push(...coordinatesArray);
+                
+                // Recursively flatten the coordinate array to just points [lon, lat] for bounds calculation
+                let currentCoords = [];
+                if (geometry.type === 'Polygon') {
+                    currentCoords = geometry.coordinates.flat(1);
+                } else if (geometry.type === 'MultiPolygon') {
+                    currentCoords = geometry.coordinates.flat(2); 
+                }
+                allCoords.push(...currentCoords);
             });
 
             // 1. Calculate the projection scale and offset
@@ -148,14 +153,20 @@ function createMap(geojson) {
         const properties = feature.properties;
         const geometry = feature.geometry;
 
-        const coordinatesArray = (geometry.type === 'MultiPolygon') 
-                                ? geometry.coordinates.flat(1) 
-                                : [geometry.coordinates];
-
-        coordinatesArray.forEach(coordinates => {
-            if (!coordinates || coordinates.length === 0) return; 
-            
-            const shapeCoordinates = coordinates[0]; 
+        // --- ROBUST MULTIPOLYGON PROCESSING ---
+        let parts = [];
+        if (geometry.type === 'MultiPolygon') {
+            // Get the outer ring (boundary) for each separate polygon (island)
+            parts = geometry.coordinates.map(polygon => polygon[0]); 
+        } else if (geometry.type === 'Polygon') {
+            // Get the outer ring for a simple polygon
+            parts = [geometry.coordinates[0]]; 
+        } else {
+            return; // Skip unknown geometry types
+        }
+        
+        parts.forEach(shapeCoordinates => {
+            if (!shapeCoordinates || shapeCoordinates.length === 0) return;
             
             const shape = new THREE.Shape();
             
@@ -170,7 +181,8 @@ function createMap(geojson) {
                 const currentY = shapeCoordinates[i][1] * scaleFactor + centerOffset.y;
                 shape.lineTo(currentX, currentY);
             }
-
+            
+            // --- Extrusion and Mesh Creation ---
             const extrudeSettings = {
                 depth: EXTRUSION_HEIGHT,
                 bevelEnabled: false
