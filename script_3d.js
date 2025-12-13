@@ -84,7 +84,6 @@ function projectCoordinates(coords, mapCenter) {
     const latRange = maxLat - minLat;
     
     // Determine a scale factor to fit the map into a 500x500 area
-    // NOTE: Používame latRange, pretože mapy sveta sú širšie ako vyššie, ale Filipíny sú skôr vertikálne.
     scaleFactor = Math.min(500 / lonRange, 500 / latRange) || 1; 
 
     // Calculate the center offset to center the map at (250, 250)
@@ -170,12 +169,12 @@ function createMap(geojson) {
             
             const shape = new THREE.Shape();
             
-            // --- APLIKÁCIA SÚRADNÍC S PROJEKCIOU (LON na X, LAT na Y) ---
+            // --- APLIKÁCIA SÚRADNÍC S INVERZIOU X-OSI ---
             const lon_start = shapeCoordinates[0][0]; // Longitude -> X
             const lat_start = shapeCoordinates[0][1]; // Latitude -> Y
             
-            // Výpočet počiatočného bodu
-            const startX = lon_start * scaleFactor + centerOffset.x;
+            // Výpočet počiatočného bodu: Používame -scaleFactor pre zrkadlové otočenie
+            const startX = lon_start * -scaleFactor + centerOffset.x;
             const startY = lat_start * scaleFactor + centerOffset.y; 
             
             shape.moveTo(startX, startY);
@@ -184,8 +183,8 @@ function createMap(geojson) {
                 const lon_current = shapeCoordinates[i][0];
                 const lat_current = shapeCoordinates[i][1];
                 
-                // Výpočet aktuálneho bodu
-                const currentX = lon_current * scaleFactor + centerOffset.x;
+                // Výpočet aktuálneho bodu: Používame -scaleFactor pre X
+                const currentX = lon_current * -scaleFactor + centerOffset.x;
                 const currentY = lat_current * scaleFactor + centerOffset.y;
                 
                 shape.lineTo(currentX, currentY);
